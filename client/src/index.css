@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* responsive code */
+@media (max-width:340px) {
+    .poster {
+    height: 160px !important;
+    }
+}
