@@ -14,7 +14,8 @@ export default function ProductModal({ show, onClose, onSuccess, editProduct }) 
   const [imageItems, setImageItems] = useState([])
   const [loading, setLoading] = useState(false)
 
-  const imageBaseUrl = "http://localhost:8000/images/products/"
+  const imageBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:8000/api")
+    .replace(/\/api$/, "") + "/images/products/"
 
   // Edit mode mein form prefill karo
   useEffect(() => {

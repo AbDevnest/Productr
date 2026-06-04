@@ -96,7 +96,7 @@ const addProduct = async (req, res) => {
 const getProducts = async (req, res) => {
   try {
     const products = await ProductModel.find().sort({ createdAt: -1 });
-    const imageBaseUrl = "http://localhost:8000/images/products/";
+    const imageBaseUrl = `${req.protocol}://${req.get("host")}/images/products/`;
     return succeesResponse(res, "Products found", { products, imageBaseUrl });
   } catch (error) {
     return serverError_Response(res);

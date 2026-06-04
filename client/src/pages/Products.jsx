@@ -14,7 +14,8 @@ export default function Products() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
 
-  const imageBaseUrl = "http://localhost:8000/images/products/"
+  const imageBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:8000/api")
+    .replace(/\/api$/, "") + "/images/products/"
 
   useEffect(() => { fetchProducts() }, [])
 
