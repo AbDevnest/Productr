@@ -14,11 +14,15 @@ export default function Login() {
       setError("");
       const res = await sendOTP(email);
       if (res.data.status) {
+        localStorage.setItem("pending_email", email);
+        if (res.data.data?.otp) {
+          localStorage.setItem("pending_otp", res.data.data.otp);
+        }
         // OTP page pe jao
-        navigate("/otp", { state: { email } });
+        navigate("/otp", { state: { email, otp: res.data.data?.otp } });
       }
     } catch (err) {
-      setError("Something went wrong!");
+      setError(err?.response?.data?.message || "Something went wrong!");
     } finally {
       setLoading(false);
     }

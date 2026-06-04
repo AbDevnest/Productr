@@ -18,6 +18,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('email')
+    localStorage.removeItem('pending_email')
+    localStorage.removeItem('pending_otp')
     setUser(null)
   }
 

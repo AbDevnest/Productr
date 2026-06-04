@@ -24,7 +24,7 @@ const transporter = nodemailer.createTransport({
 // Send OTP
 const sendOTP = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = req.body.email?.trim().toLowerCase();
 
     if (!email) return allFields_Response(res);
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
@@ -53,7 +53,10 @@ const sendOTP = async (req, res) => {
       console.log("OTP email failed:", error.message);
     });
 
-    return succeesResponse(res, "OTP sent successfully");
+    return succeesResponse(res, "OTP sent successfully", {
+      email,
+      otp,
+    });
 
   } catch (error) {
     console.log("ERROR:", error.message)
