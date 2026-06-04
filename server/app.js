@@ -10,7 +10,15 @@ const server = express();
 server.use(express.json());
 server.use(fileUpload({ useTempFiles: true }));
 server.use(express.static("public"));
-server.use(cors({ origin: "http://localhost:5173" }));
+server.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://productr-flax.vercel.app",
+    ],
+    credentials: true,
+  })
+);
 
 // Routes
 server.use("/api/auth", require("./routes/auth"));
