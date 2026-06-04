@@ -43,11 +43,14 @@ const sendOTP = async (req, res) => {
       { upsert: true, returnDocument: 'after' }
     );
 
-    await transporter.sendMail({
+    // Email ko background me bhejo, taaki request block na ho.
+    void transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
       subject: "Your Productr OTP",
       html: `<h2>Your OTP is: <b>${otp}</b></h2><p>Valid for 5 minutes only!</p>`,
+    }).catch((error) => {
+      console.log("OTP email failed:", error.message);
     });
 
     return succeesResponse(res, "OTP sent successfully");
