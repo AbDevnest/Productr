@@ -7,14 +7,20 @@ const {
   serverError_Response,
 } = require("../helper/responseHelper");
 
-// Nodemailer (Gmail) transporter
+// Nodemailer Gmail transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    requireTLS: true,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
   });
 };
 
@@ -30,54 +36,17 @@ const sendOtpEmail = async (email, otp) => {
     </div>
   `;
 
-  // Try Gmail (Nodemailer) first — works for all emails, no restriction
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    try {
-      const transporter = createTransporter();
-      await transporter.sendMail({
-        from: `Productr <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject,
-        text,
-        html,
-      });
-      console.log("[sendOtpEmail] Gmail sent successfully to:", email);
-      return;
-    } catch (gmailError) {
-      console.error("[sendOtpEmail] Gmail failed:", gmailError.message);
-      // Fall through to Resend if Gmail fails
-    }
-  }
+  const transporter = createTransporter();
 
-  // Fallback: Resend API
-  if (process.env.RESEND_API_KEY) {
-    console.log("[sendOtpEmail] Trying Resend as fallback...");
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM || "Productr <onboarding@resend.dev>",
-        to: email,
-        subject,
-        text,
-        html,
-      }),
-    });
+  await transporter.sendMail({
+    from: `Productr <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject,
+    text,
+    html,
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[sendOtpEmail] Resend failed:", errorText);
-      throw new Error("Email delivery failed. Please try again.");
-    }
-
-    console.log("[sendOtpEmail] Resend sent successfully to:", email);
-    return;
-  }
-
-  throw new Error("No email service configured. Please contact support.");
+  console.log("[sendOtpEmail] Gmail sent successfully to:", email);
 };
 
 // Send OTP
