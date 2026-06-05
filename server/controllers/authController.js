@@ -39,7 +39,7 @@ const sendOtpEmail = async (email, otp) => {
       },
       body: JSON.stringify({
         from: process.env.RESEND_FROM || "Productr <onboarding@resend.dev>",
-        to: "abhishekkumawat799@gmail.com",
+        to: email,
         subject,
         text,
         html,
