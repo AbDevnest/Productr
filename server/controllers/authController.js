@@ -7,30 +7,51 @@ const {
   serverError_Response,
 } = require("../helper/responseHelper");
 
-// Nodemailer setup
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  family: 4,
-  tls: {
-    servername: "smtp.gmail.com",
-  },
-  connectionTimeout: 60000,
-  greetingTimeout: 60000,
-  socketTimeout: 60000,
-});
+// Nodemailer (Gmail) transporter
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+};
 
 const sendOtpEmail = async (email, otp) => {
   const subject = "Your Productr OTP";
   const text = `Your Productr OTP is ${otp}. It is valid for 5 minutes.`;
-  const html = `<h2>Your OTP is: <b>${otp}</b></h2><p>Valid for 5 minutes only!</p>`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 400px; margin: auto; padding: 24px; border: 1px solid #eee; border-radius: 8px;">
+      <h2 style="color: #1e3a8a;">Productr - OTP Verification</h2>
+      <p>Your One-Time Password is:</p>
+      <h1 style="letter-spacing: 8px; color: #1e3a8a;">${otp}</h1>
+      <p style="color: #888; font-size: 13px;">This OTP is valid for <b>5 minutes</b>. Do not share it with anyone.</p>
+    </div>
+  `;
 
+  // Try Gmail (Nodemailer) first — works for all emails, no restriction
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    try {
+      const transporter = createTransporter();
+      await transporter.sendMail({
+        from: `Productr <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject,
+        text,
+        html,
+      });
+      console.log("[sendOtpEmail] Gmail sent successfully to:", email);
+      return;
+    } catch (gmailError) {
+      console.error("[sendOtpEmail] Gmail failed:", gmailError.message);
+      // Fall through to Resend if Gmail fails
+    }
+  }
+
+  // Fallback: Resend API
   if (process.env.RESEND_API_KEY) {
+    console.log("[sendOtpEmail] Trying Resend as fallback...");
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -48,19 +69,15 @@ const sendOtpEmail = async (email, otp) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(errorText || "Resend email failed");
+      console.error("[sendOtpEmail] Resend failed:", errorText);
+      throw new Error("Email delivery failed. Please try again.");
     }
 
+    console.log("[sendOtpEmail] Resend sent successfully to:", email);
     return;
   }
 
-  await transporter.sendMail({
-    from: `Productr <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject,
-    text,
-    html,
-  });
+  throw new Error("No email service configured. Please contact support.");
 };
 
 // Send OTP
