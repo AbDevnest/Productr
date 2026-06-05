@@ -7,19 +7,32 @@ const {
   serverError_Response,
 } = require("../helper/responseHelper");
 
+// ✅ Fixed Brevo SMTP Transporter
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: false,
+  host: process.env.SMTP_HOST,       // smtp-relay.brevo.com
+  port: Number(process.env.SMTP_PORT), // 587
+  secure: false,                      // false for port 587 (STARTTLS)
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.EMAIL_USER,     // Brevo login email (NOT sender email)
+    pass: process.env.EMAIL_PASS,     // Brevo SMTP Password (from SMTP & API tab)
+  },
+  tls: {
+    rejectUnauthorized: false,        // ✅ Render pe SSL error fix
   },
 });
 
+// ✅ Startup pe connection verify karo
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ SMTP Connection Failed:", error.message);
+  } else {
+    console.log("✅ SMTP Server Ready - Emails will be sent!");
+  }
+});
+
 const sendOtpEmail = async (email, otp) => {
-  await transporter.sendMail({
-    from: `Productr <${process.env.EMAIL_USER}>`,
+  const mailOptions = {
+    from: `"Productr" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Your Productr OTP",
     text: `Your OTP is ${otp}. Valid for 5 minutes.`,
@@ -31,8 +44,10 @@ const sendOtpEmail = async (email, otp) => {
         <p style="color: #888; font-size: 13px;">Valid for <b>5 minutes</b>. Do not share it with anyone.</p>
       </div>
     `,
-  });
-  console.log("[sendOtpEmail] OTP sent to:", email);
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log("✅ OTP sent to:", email, "| Message ID:", info.messageId);
 };
 
 // Send OTP
@@ -41,7 +56,10 @@ const sendOTP = async (req, res) => {
     const email = req.body.email?.trim().toLowerCase();
 
     if (!email || !email.includes("@")) {
-      return res.status(400).json({ status: false, message: "Please enter a valid email address" });
+      return res.status(400).json({
+        status: false,
+        message: "Please enter a valid email address",
+      });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -50,16 +68,33 @@ const sendOTP = async (req, res) => {
     await User.findOneAndUpdate(
       { email },
       { otp, otpExpiry },
-      { upsert: true }
+      { upsert: true, new: true }
     );
 
     await sendOtpEmail(email, otp);
 
     return succeesResponse(res, "OTP sent successfully");
-
   } catch (error) {
-    console.error("[sendOTP] ERROR:", error.message);
-    return res.status(500).json({ status: false, message: "Failed to send OTP. Please try again." });
+    console.error("❌ [sendOTP] ERROR:", error.message);
+
+    // ✅ User ko clear error message
+    if (error.code === "EAUTH") {
+      return res.status(500).json({
+        status: false,
+        message: "Email service authentication failed. Contact support.",
+      });
+    }
+    if (error.code === "ECONNECTION" || error.code === "ETIMEDOUT") {
+      return res.status(500).json({
+        status: false,
+        message: "Email service unavailable. Please try again.",
+      });
+    }
+
+    return res.status(500).json({
+      status: false,
+      message: "Failed to send OTP. Please try again.",
+    });
   }
 };
 
@@ -70,26 +105,27 @@ const verifyOTP = async (req, res) => {
 
     if (!email || !otp) return allFields_Response(res);
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
 
     if (!user || user.otp !== otp) {
       return res.status(400).json({ status: false, message: "Invalid OTP" });
     }
 
     if (user.otpExpiry < new Date()) {
-      return res.status(400).json({ status: false, message: "OTP expired" });
+      return res.status(400).json({ status: false, message: "OTP expired. Please request a new one." });
     }
 
-    const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ email }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
     user.otp = null;
     user.otpExpiry = null;
     await user.save();
 
     return succeesResponse(res, "Login successful", { token, email });
-
   } catch (error) {
-    console.error("[verifyOTP] ERROR:", error.message);
+    console.error("❌ [verifyOTP] ERROR:", error.message);
     return serverError_Response(res);
   }
 };
