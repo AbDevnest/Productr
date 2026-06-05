@@ -7,15 +7,19 @@ export default function OtpVerify() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-  const [otp, setOtp] = useState(
-    location.state?.otp || localStorage.getItem("pending_otp") || ""
-  );
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(30); // 20 second timer
   const [canResend, setCanResend] = useState(false);
 
-  const email = location.state?.email || localStorage.getItem("pending_email");
+  const email = location.state?.email;
+
+  useEffect(() => {
+    if (!email) {
+      navigate("/");
+    }
+  }, [email, navigate]);
 
   // Timer logic
   useEffect(() => {
@@ -31,18 +35,11 @@ export default function OtpVerify() {
 
   const handleVerify = async () => {
     try {
-      if (!email) {
-        setError("Email missing. Please login again.");
-        navigate("/");
-        return;
-      }
       setLoading(true);
       setError("");
       const res = await verifyOTP(email, otp);
       if (res.data.status) {
         login(res.data.data.token, email);
-        localStorage.removeItem("pending_email");
-        localStorage.removeItem("pending_otp");
         navigate("/home");
       }
     } catch (err) {
@@ -54,17 +51,10 @@ export default function OtpVerify() {
 
   const handleResend = async () => {
     try {
-      if (!email) {
-        setError("Email missing. Please login again.");
-        navigate("/");
-        return;
-      }
       await sendOTP(email);
       setTimer(30); // timer reset
       setCanResend(false); // resend band
-      if (localStorage.getItem("pending_otp")) {
-        setOtp(localStorage.getItem("pending_otp"));
-      }
+      setOtp("");
       setError("");
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to resend OTP!");

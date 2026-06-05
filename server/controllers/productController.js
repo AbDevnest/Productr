@@ -96,7 +96,7 @@ const addProduct = async (req, res) => {
 const getProducts = async (req, res) => {
   try {
     const products = await ProductModel.find().sort({ createdAt: -1 });
-    const imageBaseUrl = `${req.protocol}://${req.get("host")}/images/products/`;
+    const imageBaseUrl = "http://localhost:8000/images/products/";
     return succeesResponse(res, "Products found", { products, imageBaseUrl });
   } catch (error) {
     return serverError_Response(res);
@@ -120,8 +120,8 @@ const updateProduct = async (req, res) => {
       exchangeEligible,
     } = req.body;
 
-    // Purani images rakho, nayi images ko append karo
-    let images = [...product.images];
+    // Purani images rakho
+    let images = product.images;
 
     // Agar nayi images aayi hain
     if (req.files && req.files.images) {
@@ -141,7 +141,7 @@ const updateProduct = async (req, res) => {
             return imageName;
           }),
         );
-        images = [...images, ...allImages];
+        images = allImages;
       } else {
         const imageName = createUniqueFileName(files.name);
         const destination = "./public/images/products/" + imageName;
@@ -151,7 +151,7 @@ const updateProduct = async (req, res) => {
             else resolve();
           });
         });
-        images = [...images, imageName];
+        images = [imageName];
       }
     }
 

@@ -11,11 +11,11 @@ export default function ProductModal({ show, onClose, onSuccess, editProduct }) 
     brandName: "",
     exchangeEligible: "Yes",
   })
-  const [imageItems, setImageItems] = useState([])
+  const [images, setImages] = useState([])
+  const [previewImages, setPreviewImages] = useState([])
   const [loading, setLoading] = useState(false)
 
-  const imageBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:8000/api")
-    .replace(/\/api$/, "") + "/images/products/"
+  const imageBaseUrl = "http://localhost:8000/images/products/"
 
   // Edit mode mein form prefill karo
   useEffect(() => {
@@ -29,13 +29,8 @@ export default function ProductModal({ show, onClose, onSuccess, editProduct }) 
         brandName: editProduct.brandName || "",
         exchangeEligible: editProduct.exchangeEligible ? "Yes" : "No",
       })
-      setImageItems(
-        editProduct.images?.map((img) => ({
-          src: imageBaseUrl + img,
-          isExisting: true,
-          imageName: img,
-        })) || []
-      )
+      setPreviewImages(editProduct.images?.map((img) => imageBaseUrl + img) || [])
+      setImages([])
     } else {
       setForm({
         name: "",
@@ -46,7 +41,8 @@ export default function ProductModal({ show, onClose, onSuccess, editProduct }) 
         brandName: "",
         exchangeEligible: "Yes",
       })
-      setImageItems([])
+      setImages([])
+      setPreviewImages([])
     }
   }, [editProduct, show])
 
@@ -57,27 +53,13 @@ export default function ProductModal({ show, onClose, onSuccess, editProduct }) 
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files)
-    const newItems = files.map((file) => ({
-      src: URL.createObjectURL(file),
-      file,
-      isExisting: false,
-    }))
-    setImageItems((prev) => [...prev, ...newItems])
-    e.target.value = ""
+    setImages(files)
+    setPreviewImages(files.map((f) => URL.createObjectURL(f)))
   }
 
   const handleRemovePreview = (index) => {
-    setImageItems((prev) => {
-      const target = prev[index]
-      if (!target) return prev
-
-      if (target.file) {
-        URL.revokeObjectURL(target.src)
-        return prev.filter((_, i) => i !== index)
-      }
-
-      return prev
-    })
+    setImages((prev) => prev.filter((_, i) => i !== index))
+    setPreviewImages((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async () => {
@@ -98,9 +80,8 @@ export default function ProductModal({ show, onClose, onSuccess, editProduct }) 
       formData.append("exchangeEligible", form.exchangeEligible === "Yes")
 
       // Multiple images append
-      const newImages = imageItems.filter((item) => item.file).map((item) => item.file)
-      if (newImages.length > 0) {
-        newImages.forEach((img) => {
+      if (images.length > 0) {
+        images.forEach((img) => {
           formData.append("images", img)
         })
       }
@@ -223,23 +204,21 @@ export default function ProductModal({ show, onClose, onSuccess, editProduct }) 
               onChange={handleImageChange}
               className="border p-2 rounded w-full mt-1 text-sm"
             />
-            {imageItems.length > 0 && (
+            {previewImages.length > 0 && (
               <div className="flex gap-2 mt-2 flex-wrap">
-                {imageItems.map((item, i) => (
+                {previewImages.map((src, i) => (
                   <div key={i} className="relative">
                     <img
-                      src={item.src}
+                      src={src}
                       className="w-16 h-16 object-cover rounded border"
                       alt=""
                     />
-                    {!item.isExisting && (
-                      <button
-                        onClick={() => handleRemovePreview(i)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
-                      >
-                        ✕
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleRemovePreview(i)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
+                    >
+                      ✕
+                    </button>
                   </div>
                 ))}
               </div>

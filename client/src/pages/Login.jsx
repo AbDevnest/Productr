@@ -10,16 +10,17 @@ export default function Login() {
 
   const handleLogin = async () => {
     try {
+      if (!email.trim() || !email.includes("@")) {
+        setError("Please enter a valid email address");
+        return;
+      }
+
       setLoading(true);
       setError("");
       const res = await sendOTP(email);
       if (res.data.status) {
-        localStorage.setItem("pending_email", email);
-        if (res.data.data?.otp) {
-          localStorage.setItem("pending_otp", res.data.data.otp);
-        }
         // OTP page pe jao
-        navigate("/otp", { state: { email, otp: res.data.data?.otp } });
+        navigate("/otp", { state: { email } });
       }
     } catch (err) {
       setError(err?.response?.data?.message || "Something went wrong!");
@@ -62,10 +63,10 @@ return (
       </h2>
 
       <div className="w-full max-w-md">
-        <label className="text-sm text-gray-600">Email or Phone number</label>
+        <label className="text-sm text-gray-600">Email address</label>
         <input
           type="email"
-          placeholder="Enter email or phone number"
+          placeholder="Enter email address"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="border p-3 rounded w-full mt-1"

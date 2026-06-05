@@ -1,6 +1,3 @@
-import { useEffect, useState } from "react"
-import { MdDelete } from "react-icons/md";
-
 export default function ProductCard({
   product,
   imageBaseUrl,
@@ -8,33 +5,14 @@ export default function ProductCard({
   onDelete,
   onTogglePublish,
 }) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const totalImages = product.images?.length || 0
-
-  useEffect(() => {
-    setCurrentImageIndex(0)
-  }, [product._id, totalImages])
-
-  const handlePrevImage = (e) => {
-    e.stopPropagation()
-    if (totalImages <= 1) return
-    setCurrentImageIndex((prev) => (prev - 1 + totalImages) % totalImages)
-  }
-
-  const handleNextImage = (e) => {
-    e.stopPropagation()
-    if (totalImages <= 1) return
-    setCurrentImageIndex((prev) => (prev + 1) % totalImages)
-  }
-
   return (
     <div className="border rounded-xl p-4 flex flex-col gap-3 bg-white">
 
-      {/* Image Slider */}
-      <div className="w-full h-52 bg-gray-100 rounded-lg overflow-hidden relative group">
-        {totalImages > 0 ? (
+      {/* Image Slider - simple */}
+      <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden relative">
+        {product.images && product.images.length > 0 ? (
           <img
-            src={imageBaseUrl + product.images[currentImageIndex]}
+            src={imageBaseUrl + product.images[0]}
             alt={product.name}
             className="w-full h-full object-contain"
           />
@@ -44,38 +22,16 @@ export default function ProductCard({
           </div>
         )}
 
-        {totalImages > 1 && (
-          <>
-            <button
-              onClick={handlePrevImage}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-              aria-label="Previous image"
-            >
-              ‹
-            </button>
-            <button
-              onClick={handleNextImage}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/45 text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-              aria-label="Next image"
-            >
-              ›
-            </button>
-            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-              {product.images.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setCurrentImageIndex(i)
-                  }}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    i === currentImageIndex ? "bg-red-400" : "bg-gray-300"
-                  }`}
-                  aria-label={`Go to image ${i + 1}`}
-                />
-              ))}
-            </div>
-          </>
+        {/* Dots */}
+        {product.images?.length > 1 && (
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+            {product.images.map((_, i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full ${i === 0 ? "bg-red-400" : "bg-gray-300"}`}
+              />
+            ))}
+          </div>
         )}
       </div>
 
@@ -120,23 +76,23 @@ export default function ProductCard({
       <div className="flex gap-2 mt-2">
         <button
           onClick={() => onTogglePublish(product._id)}
-          className={`flex-1 py-2 rounded text-white text-sm font-medium cursor-pointer ${
-            product.isPublished ? "bg-green-500 hover:bg-yellow-500" : "bg-blue-900 hover:bg-yellow-500"
+          className={`flex-1 py-2 rounded text-white text-sm font-medium ${
+            product.isPublished ? "bg-green-500" : "bg-blue-900"
           }`}
         >
           {product.isPublished ? "Unpublish" : "Publish"}
         </button>
         <button
           onClick={() => onEdit(product)}
-          className="flex-1 py-2 rounded cursor-pointer border hover:border-green-500 hover:text-green-500 text-sm font-medium text-gray-700"
+          className="flex-1 py-2 rounded border text-sm font-medium text-gray-700"
         >
           Edit
         </button>
         <button
           onClick={() => onDelete(product)}
-          className="p-2 border cursor-pointer rounded text-gray-500 hover:text-red-500"
+          className="p-2 border rounded text-gray-500 hover:text-red-500"
         >
-          <MdDelete size={20} />
+          🗑️
         </button>
       </div>
 

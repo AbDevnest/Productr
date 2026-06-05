@@ -1,13 +1,15 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 
 const AuthContext = createContext()
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
     const token = localStorage.getItem('token')
     const email = localStorage.getItem('email')
-    return token && email ? { email, token } : null
-  })
+    if (token && email) setUser({ email, token })
+  }, [])
 
   const login = (token, email) => {
     localStorage.setItem('token', token)
@@ -18,8 +20,6 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('email')
-    localStorage.removeItem('pending_email')
-    localStorage.removeItem('pending_otp')
     setUser(null)
   }
 

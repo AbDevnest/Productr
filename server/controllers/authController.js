@@ -16,18 +16,69 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+  family: 4,
+  tls: {
+    servername: "smtp.gmail.com",
+  },
+  connectionTimeout: 60000,
+  greetingTimeout: 60000,
+  socketTimeout: 60000,
 });
+
+const sendOtpEmail = async (email, otp) => {
+  const subject = "Your Productr OTP";
+  const text = `Your Productr OTP is ${otp}. It is valid for 5 minutes.`;
+  const html = `<h2>Your OTP is: <b>${otp}</b></h2><p>Valid for 5 minutes only!</p>`;
+
+  if (process.env.RESEND_API_KEY) {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || "Productr <onboarding@resend.dev>",
+        to: "abhishekkumawat799@gmail.com",
+        subject,
+        text,
+        html,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Resend email failed");
+    }
+
+    return;
+  }
+
+  await transporter.sendMail({
+    from: `Productr <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject,
+    text,
+    html,
+  });
+};
 
 // Send OTP
 const sendOTP = async (req, res) => {
   try {
     const email = req.body.email?.trim().toLowerCase();
 
-    if (!email) return allFields_Response(res);
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.log("[sendOTP] Step 1: request received", { email });
+
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({
+        status: false,
+        message: "Please enter a valid email address",
+      });
+    }
+
+    if (!process.env.RESEND_API_KEY && (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)) {
+      console.log("[sendOTP] Step 2: email env missing");
       return res.status(500).json({
         status: false,
         message: "Email service is not configured",
@@ -37,30 +88,29 @@ const sendOTP = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date(Date.now() + 5 * 60 * 1000);
 
+    console.log("[sendOTP] Step 2: OTP generated", { otp, otpExpiry });
+
     await User.findOneAndUpdate(
       { email },
       { otp, otpExpiry },
       { upsert: true, returnDocument: 'after' }
     );
 
-    // Email ko background me bhejo, taaki request block na ho.
-    void transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Your Productr OTP",
-      html: `<h2>Your OTP is: <b>${otp}</b></h2><p>Valid for 5 minutes only!</p>`,
-    }).catch((error) => {
-      console.log("OTP email failed:", error.message);
-    });
+    console.log("[sendOTP] Step 3: OTP saved in database");
 
-    return succeesResponse(res, "OTP sent successfully", {
-      email,
-      otp,
-    });
+    console.log("[sendOTP] Step 4: sending mail...");
+    await sendOtpEmail(email, otp);
+
+    console.log("[sendOTP] Step 5: mail sent successfully", { email });
+
+    return succeesResponse(res, "OTP sent successfully");
 
   } catch (error) {
-    console.log("ERROR:", error.message)
-    return serverError_Response(res);
+    console.log("[sendOTP] ERROR:", error);
+    return res.status(500).json({
+      status: false,
+      message: error.message || "Server Error",
+    });
   }
 };
 

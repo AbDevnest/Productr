@@ -5,23 +5,16 @@ const fileUpload = require("express-fileupload");
 require("dotenv").config();
 
 const server = express();
-server.set("trust proxy", 1);
 const allowedOrigins = [
-  process.env.CLIENT_URL,
   "http://localhost:5173",
   "https://productr-flax.vercel.app",
-].filter(Boolean);
+];
 
 // Middleware
 server.use(express.json());
 server.use(fileUpload({ useTempFiles: true }));
 server.use(express.static("public"));
-server.use(
-  cors({
-    origin: allowedOrigins,
-    credentials: true,
-  })
-);
+server.use(cors({ origin: allowedOrigins }));
 
 // Routes
 server.use("/api/auth", require("./routes/auth"));
