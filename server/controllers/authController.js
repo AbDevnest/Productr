@@ -1,28 +1,10 @@
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
 const User = require("../models/user.model");
 const {
   succeesResponse,
   allFields_Response,
   serverError_Response,
 } = require("../helper/responseHelper");
-
-// Nodemailer Gmail transporter
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    requireTLS: true,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 15000,
-  });
-};
 
 const sendOtpEmail = async (email, otp) => {
   const subject = "Your Productr OTP";
@@ -36,17 +18,29 @@ const sendOtpEmail = async (email, otp) => {
     </div>
   `;
 
-  const transporter = createTransporter();
-
-  await transporter.sendMail({
-    from: `Productr <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject,
-    text,
-    html,
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "Productr <onboarding@resend.dev>",
+      to: [email],
+      subject,
+      text,
+      html,
+    }),
   });
 
-  console.log("[sendOtpEmail] Gmail sent successfully to:", email);
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error("[sendOtpEmail] Resend error:", JSON.stringify(data));
+    throw new Error(data?.message || "Email delivery failed");
+  }
+
+  console.log("[sendOtpEmail] Resend sent successfully to:", email, "| id:", data.id);
 };
 
 // Send OTP
