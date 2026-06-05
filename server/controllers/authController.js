@@ -32,7 +32,7 @@ transporter.verify((error, success) => {
 
 const sendOtpEmail = async (email, otp) => {
   const mailOptions = {
-    from: `"Productr" <${process.env.EMAIL_USER}>`,
+    from: `"Productr" <abhishekkumawat799@gmail.com>`,
     to: email,
     subject: "Your Productr OTP",
     text: `Your OTP is ${otp}. Valid for 5 minutes.`,
